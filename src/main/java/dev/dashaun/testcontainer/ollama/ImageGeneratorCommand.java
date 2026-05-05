@@ -21,7 +21,7 @@ public class ImageGeneratorCommand {
 
     private static final String MODEL = "qwen2.5-coder:1.5b";
     private static final String EMBED_MODEL = "nomic-embed-text";
-    private static final String REPOSITORY = "dashaun/testcontainer-ollama-qwen2.5-coder_1.5b";
+    private static final String REPOSITORY = "ghcr.io/dashaun/testcontainer-ollama-qwen2.5-coder_1.5b";
 
     @ShellMethod(key = "generate", value = "Pull qwen2.5-coder into an Ollama container and commit it as a tagged image")
     public void generate(@ShellOption(value = "--ollamaVersion") String ollamaVersion) throws Exception {

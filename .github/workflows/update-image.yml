@@ -12,6 +12,9 @@ on:
 jobs:
   check-and-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -26,11 +29,12 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "Latest ollama version: ${VERSION}"
 
-      - name: Get our latest published version from Docker Hub
+      - name: Get our latest published version from GHCR
         id: ours
         run: |
-          BUILT=$(curl -s "https://hub.docker.com/v2/repositories/dashaun/testcontainer-ollama-qwen2.5-coder/tags?ordering=last_updated&page_size=25" \
-            | jq -r '.results[].name' \
+          BUILT=$(curl -s -H "Authorization: Bearer ${{ github.token }}" \
+            "https://api.github.com/users/dashaun/packages/container/testcontainer-ollama-qwen2.5-coder_1.5b/versions" \
+            | jq -r '.[].metadata.container.tags[]' \
             | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
             | sort -V | tail -1 || echo "none")
           echo "built=${BUILT}" >> $GITHUB_OUTPUT
@@ -59,19 +63,20 @@ jobs:
         if: steps.check.outputs.needed == 'true'
         with:
           java-version: '17'
-          distribution: 'temurin'
+          distribution: 'liberica'
           cache: 'maven'
 
       - name: Build jar
         if: steps.check.outputs.needed == 'true'
         run: mvn -q package -DskipTests
 
-      - name: Log in to Docker Hub
+      - name: Log in to GHCR
         if: steps.check.outputs.needed == 'true'
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate and commit image
         if: steps.check.outputs.needed == 'true'
@@ -80,8 +85,8 @@ jobs:
 
       - name: Push versioned tag
         if: steps.check.outputs.needed == 'true'
-        run: docker push dashaun/testcontainer-ollama-qwen2.5-coder:${{ steps.check.outputs.target }}
+        run: docker push ghcr.io/dashaun/testcontainer-ollama-qwen2.5-coder_1.5b:${{ steps.check.outputs.target }}
 
       - name: Push latest tag
         if: steps.check.outputs.needed == 'true'
-        run: docker push dashaun/testcontainer-ollama-qwen2.5-coder:latest
+        run: docker push ghcr.io/dashaun/testcontainer-ollama-qwen2.5-coder_1.5b:latest
